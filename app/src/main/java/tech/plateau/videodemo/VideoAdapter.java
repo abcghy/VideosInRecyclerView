@@ -36,7 +36,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoHolder> {
     @NonNull
     @Override
     public VideoHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
-        return new VideoHolder(viewGroup, mOnPlayListener);
+        return new VideoHolder(viewGroup, mOnPlayListener, mediaSourceFactory);
     }
 
     @Override

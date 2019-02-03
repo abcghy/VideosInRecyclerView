@@ -1,9 +1,11 @@
 package tech.plateau.videodemo;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Color;
 import android.net.Uri;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -13,12 +15,19 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.request.RequestOptions;
+import com.bumptech.glide.request.target.SimpleTarget;
+import com.bumptech.glide.request.transition.Transition;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
+import com.google.android.exoplayer2.source.ads.AdsMediaSource;
 import com.google.android.exoplayer2.ui.PlayerView;
+
+import java.io.File;
 
 public class VideoHolder extends RecyclerView.ViewHolder {
 
@@ -27,15 +36,17 @@ public class VideoHolder extends RecyclerView.ViewHolder {
     private ProgressBar pb;
     private ImageView ivPlayBtn;
     private Context mContext;
-    private MediaSource videoSource;
+    private VideoInfo mVideoInfo;
+    private AdsMediaSource.MediaSourceFactory mMediaSourceFactory;
 
     private OnPlayListener mOnPlayListener;
 
-    public VideoHolder(@NonNull ViewGroup parent, OnPlayListener onPlayListener) {
+    public VideoHolder(@NonNull ViewGroup parent, OnPlayListener onPlayListener, AdsMediaSource.MediaSourceFactory mediaSourceFactory) {
         super(LayoutInflater.from(parent.getContext()).inflate(R.layout.item_video, parent, false));
         mContext = itemView.getContext();
 
         mOnPlayListener = onPlayListener;
+        mMediaSourceFactory = mediaSourceFactory;
 
         pv = itemView.findViewById(R.id.pv);
         iv = itemView.findViewById(R.id.iv);
@@ -60,6 +71,8 @@ public class VideoHolder extends RecyclerView.ViewHolder {
             return;
         }
 
+        mVideoInfo = videoInfo;
+
         // PlayerView's bounds.
         float widthHeightRatio = videoInfo.getWidth() * 1.0f / videoInfo.getHeight();
         int width = mContext.getResources().getDisplayMetrics().widthPixels;
@@ -69,7 +82,7 @@ public class VideoHolder extends RecyclerView.ViewHolder {
         pv.setLayoutParams(lp);
 
         // the source for ExoPlayer
-        videoSource = mediaSourceFactory.createMediaSource(Uri.parse(videoInfo.getUrl()));
+//        videoSource = mediaSourceFactory.createMediaSource(Uri.parse(videoInfo.getUrl()));
 
         // PlaceHolder's bounds.
         ViewGroup.LayoutParams ivLp = iv.getLayoutParams();
@@ -85,13 +98,30 @@ public class VideoHolder extends RecyclerView.ViewHolder {
                 .into(iv);
     }
 
-    public void play(ExoPlayer exoPlayer, boolean isAutoPlayByClick) {
-        if (videoSource == null) {
+    @SuppressLint("CheckResult")
+    public void play(final ExoPlayer exoPlayer, boolean isAutoPlayByClick) {
+        if (mVideoInfo == null || mVideoInfo.getUrl() == null) {
             return;
         }
         pv.setPlayer(exoPlayer);
         exoPlayer.setPlayWhenReady(MainActivity.isAutoPlay || isAutoPlayByClick);
-        exoPlayer.prepare(videoSource);
+
+        RequestOptions requestOptions = new RequestOptions()
+                .skipMemoryCache(true)
+                .diskCacheStrategy(DiskCacheStrategy.DATA);
+
+        // Use Glide to cache video. It's convenient. If you have some particular needs. Switch it.
+        Glide.with(itemView)
+                .load(Uri.parse(mVideoInfo.getUrl()))
+                .apply(requestOptions)
+                .downloadOnly(new SimpleTarget<File>() {
+                    @Override
+                    public void onResourceReady(@NonNull File resource, @Nullable Transition<? super File> transition) {
+                        Log.d("test", "file: " + resource);
+                        MediaSource mediaSource = mMediaSourceFactory.createMediaSource(Uri.fromFile(resource));
+                        exoPlayer.prepare(mediaSource);
+                    }
+                });
 
         exoPlayer.addListener(mEventListener);
 
