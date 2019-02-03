@@ -43,6 +43,8 @@ public class VideoHolder extends RecyclerView.ViewHolder {
         pb.setVisibility(View.GONE);
         ivPlayBtn = itemView.findViewById(R.id.ivPlayBtn);
 
+        pv.setUseController(false);
+
         ivPlayBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -112,9 +114,12 @@ public class VideoHolder extends RecyclerView.ViewHolder {
         }
     };
 
-    public void stop(ExoPlayer exoPlayer) {
+    public void stop(ExoPlayer exoPlayer, boolean isStop) {
         exoPlayer.removeListener(mEventListener);
-        exoPlayer.stop();
+        if (isStop) {
+            exoPlayer.stop();
+        }
+        exoPlayer.setPlayWhenReady(false);
         iv.setVisibility(View.VISIBLE);
         ivPlayBtn.setVisibility(View.VISIBLE);
         pv.setPlayer(null);

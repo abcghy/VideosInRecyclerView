@@ -75,7 +75,7 @@ public class MainActivity extends AppCompatActivity implements OnPlayListener {
                             || ((lastVideoHolder != null) && getVisiblePercentOfView(lastVideoHolder.pv) < minPercent)) {
                         if (lastVideoHolder != null) {
                             // once the visible percent is below minPercent, stop playback
-                            lastVideoHolder.stop(mSimpleExoPlayer);
+                            lastVideoHolder.stop(mSimpleExoPlayer, true);
                             lastVideoHolderPos = -1;
                         }
                     }
@@ -86,31 +86,8 @@ public class MainActivity extends AppCompatActivity implements OnPlayListener {
             public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
                 super.onScrollStateChanged(recyclerView, newState);
 
-                int firstPos = mLayoutManager.findFirstVisibleItemPosition();
-                int lastPos = mLayoutManager.findLastVisibleItemPosition();
-
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                    if (!NetworkUtil.isConnected()) {
-                        return;
-                    }
-
-                    if (!isMobileCacheAndPlay && NetworkUtil.isMobileData()) {
-                        return;
-                    }
-
-                    for (int i = firstPos; i <= lastPos; i++) {
-                        VideoHolder videoHolder = getVideoHolderByPos(i);
-                        if (videoHolder != null) {
-                            float percent = getVisiblePercentOfView(videoHolder.pv);
-                            if (percent >= minPercent && lastVideoHolderPos == -1) {
-                                // after IDLE, if there's no video is playing,
-                                // find the first playerView that is visible
-                                videoHolder.play(mSimpleExoPlayer, false);
-                                lastVideoHolderPos = i;
-                                break;
-                            }
-                        }
-                    }
+                    playTheFirst();
                 }
             }
         });
@@ -166,13 +143,63 @@ public class MainActivity extends AppCompatActivity implements OnPlayListener {
                 if (lastVideoHolderPos != -1) {
                     VideoHolder lastVideoHolder = getVideoHolderByPos(lastVideoHolderPos);
                     if (lastVideoHolder != null) {
-                        lastVideoHolder.stop(mSimpleExoPlayer);
+                        lastVideoHolder.stop(mSimpleExoPlayer, true);
                         lastVideoHolderPos = -1;
                     }
                 }
 
                 videoHolder.play(mSimpleExoPlayer, true);
                 lastVideoHolderPos = adapterPosition;
+            }
+        }
+    }
+
+    public void playTheFirst() {
+        int firstPos = mLayoutManager.findFirstVisibleItemPosition();
+        int lastPos = mLayoutManager.findLastVisibleItemPosition();
+
+        if (!NetworkUtil.isConnected()) {
+            return;
+        }
+
+        if (!isMobileCacheAndPlay && NetworkUtil.isMobileData()) {
+            return;
+        }
+
+        for (int i = firstPos; i <= lastPos; i++) {
+            VideoHolder videoHolder = getVideoHolderByPos(i);
+            if (videoHolder != null) {
+                float percent = getVisiblePercentOfView(videoHolder.pv);
+                if (percent >= minPercent && lastVideoHolderPos == -1) {
+                    videoHolder.play(mSimpleExoPlayer, false);
+                    lastVideoHolderPos = i;
+                    break;
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        rv.post(new Runnable() {
+            @Override
+            public void run() {
+                playTheFirst();
+            }
+        });
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        if (mSimpleExoPlayer != null && lastVideoHolderPos != -1) {
+            VideoHolder videoHolder = getVideoHolderByPos(lastVideoHolderPos);
+            if (videoHolder != null) {
+                videoHolder.stop(mSimpleExoPlayer, false);
+                lastVideoHolderPos = -1;
             }
         }
     }
