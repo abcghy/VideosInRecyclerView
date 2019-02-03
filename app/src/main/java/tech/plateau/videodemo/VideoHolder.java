@@ -10,6 +10,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 
 import com.bumptech.glide.Glide;
 import com.google.android.exoplayer2.ExoPlayer;
@@ -23,6 +24,7 @@ public class VideoHolder extends RecyclerView.ViewHolder {
 
     public PlayerView pv;
     private ImageView iv;
+    private ProgressBar pb;
     private ImageView ivPlayBtn;
     private Context mContext;
     private MediaSource videoSource;
@@ -37,6 +39,8 @@ public class VideoHolder extends RecyclerView.ViewHolder {
 
         pv = itemView.findViewById(R.id.pv);
         iv = itemView.findViewById(R.id.iv);
+        pb = itemView.findViewById(R.id.pb);
+        pb.setVisibility(View.GONE);
         ivPlayBtn = itemView.findViewById(R.id.ivPlayBtn);
 
         ivPlayBtn.setOnClickListener(new View.OnClickListener() {
@@ -79,17 +83,18 @@ public class VideoHolder extends RecyclerView.ViewHolder {
                 .into(iv);
     }
 
-    public void play(ExoPlayer exoPlayer) {
+    public void play(ExoPlayer exoPlayer, boolean isAutoPlayByClick) {
         if (videoSource == null) {
             return;
         }
         pv.setPlayer(exoPlayer);
-        exoPlayer.setPlayWhenReady(MainActivity.isAutoPlay);
+        exoPlayer.setPlayWhenReady(MainActivity.isAutoPlay || isAutoPlayByClick);
         exoPlayer.prepare(videoSource);
 
         exoPlayer.addListener(mEventListener);
 
         ivPlayBtn.setVisibility(View.GONE);
+        pb.setVisibility(View.VISIBLE);
     }
 
     private Player.EventListener mEventListener = new Player.EventListener() {
@@ -97,6 +102,7 @@ public class VideoHolder extends RecyclerView.ViewHolder {
         public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
             if (playbackState == Player.STATE_READY) {
                 iv.setVisibility(View.GONE);
+                pb.setVisibility(View.GONE);
             }
 
             if (playbackState == Player.STATE_ENDED) {

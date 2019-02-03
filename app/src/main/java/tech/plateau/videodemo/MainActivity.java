@@ -6,8 +6,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.View;
+import android.widget.Toast;
 
 import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.SimpleExoPlayer;
@@ -23,6 +23,7 @@ public class MainActivity extends AppCompatActivity implements OnPlayListener {
     private SimpleExoPlayer mSimpleExoPlayer; // only one ExoPlayer
 
     public static boolean isAutoPlay = true; // Auto play means it will auto play when you scroll.
+    public static boolean isMobileCacheAndPlay = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,6 +90,14 @@ public class MainActivity extends AppCompatActivity implements OnPlayListener {
                 int lastPos = mLayoutManager.findLastVisibleItemPosition();
 
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    if (!NetworkUtil.isConnected()) {
+                        return;
+                    }
+
+                    if (!isMobileCacheAndPlay && NetworkUtil.isMobileData()) {
+                        return;
+                    }
+
                     for (int i = firstPos; i <= lastPos; i++) {
                         VideoHolder videoHolder = getVideoHolderByPos(i);
                         if (videoHolder != null) {
@@ -96,7 +105,7 @@ public class MainActivity extends AppCompatActivity implements OnPlayListener {
                             if (percent >= minPercent && lastVideoHolderPos == -1) {
                                 // after IDLE, if there's no video is playing,
                                 // find the first playerView that is visible
-                                videoHolder.play(mSimpleExoPlayer);
+                                videoHolder.play(mSimpleExoPlayer, false);
                                 lastVideoHolderPos = i;
                                 break;
                             }
@@ -141,6 +150,15 @@ public class MainActivity extends AppCompatActivity implements OnPlayListener {
      */
     @Override
     public void onPlay(int adapterPosition) {
+        if (!NetworkUtil.isConnected()) {
+            return;
+        }
+
+        if (NetworkUtil.isMobileData()) {
+            // alert using mobile data
+            Toast.makeText(this, "You're using mobile data", Toast.LENGTH_SHORT).show();
+        }
+
         VideoHolder videoHolder = getVideoHolderByPos(adapterPosition);
         if (videoHolder != null) {
             if (getVisiblePercentOfView(videoHolder.pv) >= minPercent) {
@@ -153,7 +171,7 @@ public class MainActivity extends AppCompatActivity implements OnPlayListener {
                     }
                 }
 
-                videoHolder.play(mSimpleExoPlayer);
+                videoHolder.play(mSimpleExoPlayer, true);
                 lastVideoHolderPos = adapterPosition;
             }
         }
